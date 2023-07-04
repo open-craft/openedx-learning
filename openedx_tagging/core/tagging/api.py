@@ -10,7 +10,7 @@ No permissions/rules are enforced by these methods -- these must be enforced in 
 Please look at the models.py file for more information about the kinds of data
 are stored in this app.
 """
-from typing import List, Type, Union
+from typing import Generator, List, Type, Union
 
 from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy as _
@@ -19,17 +19,18 @@ from .models import ObjectTag, Tag, Taxonomy
 
 
 def create_taxonomy(
-    name,
-    description=None,
+    name: str,
+    description: str = None,
     enabled=True,
     required=False,
     allow_multiple=False,
     allow_free_text=False,
+    object_tag_class: Type = None,
 ) -> Taxonomy:
     """
     Creates, saves, and returns a new Taxonomy with the given attributes.
     """
-    return Taxonomy.objects.create(
+    taxonomy = Taxonomy(
         name=name,
         description=description,
         enabled=enabled,
@@ -37,6 +38,10 @@ def create_taxonomy(
         allow_multiple=allow_multiple,
         allow_free_text=allow_free_text,
     )
+    if object_tag_class:
+        taxonomy.object_tag_class = object_tag_class
+    taxonomy.save()
+    return taxonomy
 
 
 def get_taxonomies(enabled=True) -> QuerySet:
@@ -86,18 +91,33 @@ def resync_object_tags(object_tags: QuerySet = None) -> int:
 
 
 def get_object_tags(
-    taxonomy: Taxonomy, object_id: str, object_type: str, valid_only=True
-) -> List[ObjectTag]:
+    object_id: str, object_type: str = None, taxonomy: Taxonomy = None, valid_only=True
+) -> Generator[ObjectTag, None, None]:
     """
-    Returns a list of tags for a given taxonomy + content.
+    Generates a list of object tags for a given object.
+
+    Pass taxonomy to limit the returned object_tags to a specific taxonomy.
 
     Pass valid_only=False when displaying tags to content authors, so they can see invalid tags too.
-    Invalid tags will likely be hidden from learners.
+    Invalid tags will (probably) be hidden from learners.
     """
-    tags = taxonomy.objecttag_set.filter(
-        object_id=object_id, object_type=object_type
+    tags = ObjectTag.objects.filter(
+        object_id=object_id,
     ).order_by("id")
-    return [tag for tag in tags if not valid_only or taxonomy.validate_object_tag(tag)]
+    if object_type:
+        tags = tags.filter(object_type=object_type)
+    if taxonomy:
+        tags = tags.filter(_taxonomy=taxonomy)
+
+    for tag in tags:
+        # We can only validate tags with taxonomies, because we need the object_tag_class
+        if valid_only:
+            if tag._taxonomy_id:
+                object_tag = tag.taxonomy.object_tag_class().copy(tag)
+                if object_tag.is_valid():
+                    yield object_tag
+        else:
+            yield tag
 
 
 def tag_object(

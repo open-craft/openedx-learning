@@ -90,13 +90,15 @@ class TestModelTagTaxonomy(TestTagTaxonomyMixin, TestCase):
         assert self.system_taxonomy.system_defined
 
     def test_representations(self):
-        assert str(self.taxonomy) == repr(self.taxonomy) == "<Taxonomy> Life on Earth"
+        assert (
+            str(self.taxonomy) == repr(self.taxonomy) == "<Taxonomy> (1) Life on Earth"
+        )
         assert (
             str(self.system_taxonomy)
             == repr(self.system_taxonomy)
-            == "<SystemTaxonomy> System Languages"
+            == "<SystemTaxonomy> (2) System Languages"
         )
-        assert str(self.bacteria) == repr(self.bacteria) == "Tag (1) Bacteria"
+        assert str(self.bacteria) == repr(self.bacteria) == "<Tag> (1) Bacteria"
 
     @ddt.data(
         # Root tags just return their own value
@@ -151,13 +153,6 @@ class TestModelObjectTag(TestTagTaxonomyMixin, TestCase):
             tag=self.tag,
         )
 
-    def test_representations(self):
-        assert (
-            str(self.object_tag)
-            == repr(self.object_tag)
-            == "object:id:1 (life): Life on Earth=Bacteria"
-        )
-
     def test_change_taxonomy(self):
         assert self.object_tag.taxonomy == self.taxonomy
         assert self.object_tag.taxonomy.id == self.taxonomy.id
@@ -180,27 +175,36 @@ class TestModelObjectTag(TestTagTaxonomyMixin, TestCase):
             # pylint: disable=protected-access
             self.object_tag._taxonomy_id
             == self.system_taxonomy.id
+            == 2
+        )
+        object_tag = self.object_tag.taxonomy.object_tag_class().copy(self.object_tag)
+        assert (
+            str(object_tag)
+            == repr(object_tag)
+            == "<ClosedObjectTag> object:id:1 (life): System Languages=Bacteria"
+        )
+        object_tag.taxonomy.allow_free_text = True
+        object_tag = object_tag.taxonomy.object_tag_class().copy(object_tag)
+        assert (
+            str(object_tag)
+            == repr(object_tag)
+            == "<OpenObjectTag> object:id:1 (life): System Languages=Bacteria"
         )
 
     def test_object_tag_name(self):
         # ObjectTag's name defaults to its taxonomy's name
-        object_tag = ObjectTag.objects.create(
-            object_id="object:id",
-            object_type="any_old_object",
-            taxonomy=self.taxonomy,
-        )
-        assert object_tag.name == self.taxonomy.name
+        assert self.object_tag.name == self.taxonomy.name
 
         # Even if we overwrite the name, it still uses the taxonomy's name
-        object_tag.name = "Another tag"
-        assert object_tag.name == self.taxonomy.name
-        object_tag.save()
-        assert object_tag.name == self.taxonomy.name
+        self.object_tag.name = "Another tag"
+        assert self.object_tag.name == self.taxonomy.name
+        self.object_tag.save()
+        assert self.object_tag.name == self.taxonomy.name
 
         # But if the taxonomy is deleted, then the object_tag's name reverts to our cached name
         self.taxonomy.delete()
-        object_tag.refresh_from_db()
-        assert object_tag.name == "Another tag"
+        self.object_tag.refresh_from_db()
+        assert self.object_tag.name == "Another tag"
 
     def test_object_tag_value(self):
         # ObjectTag's value defaults to its tag's value
@@ -233,42 +237,34 @@ class TestModelObjectTag(TestTagTaxonomyMixin, TestCase):
         assert self.object_tag.get_lineage() == ["Another tag"]
 
     def test_object_tag_is_valid(self):
+        # All valid object tags must have a taxonomy and an object
+        object_tag = ObjectTag()
+        assert not object_tag.is_valid(
+            check_taxonomy=True, check_tag=False, check_object=False
+        )
+        assert not object_tag.is_valid(
+            check_taxonomy=False, check_tag=True, check_object=False
+        )
+        assert not object_tag.is_valid(
+            check_taxonomy=False, check_tag=False, check_object=True
+        )
+
+        # OpenObjectTags can be valid with only a value and no tag
         object_tag = ObjectTag(
             object_id="object:id",
             object_type="life",
-        )
-        assert not object_tag.is_valid
-
-        object_tag.taxonomy = self.taxonomy
-        assert not object_tag.is_valid
-
-        object_tag.tag = self.tag
-        assert object_tag.is_valid
-
-        # or, we can have no tag, and a free-text taxonomy
-        object_tag.tag = None
-        self.taxonomy.allow_free_text = True
-        self.taxonomy.save()
-        assert object_tag.is_valid
-
-    def test_validate_object_tag_invalid(self):
-        taxonomy = Taxonomy.objects.create(
-            name="Another taxonomy",
-        )
-        object_tag = ObjectTag(
             taxonomy=self.taxonomy,
+            _value="Any text we want",
         )
-        assert not taxonomy.validate_object_tag(object_tag)
+        object_tag.taxonomy.allow_free_text = True
+        assert object_tag.is_valid()
 
-        object_tag.taxonomy = taxonomy
-        assert not taxonomy.validate_object_tag(object_tag)
-
-        taxonomy.allow_free_text = True
-        assert not taxonomy.validate_object_tag(object_tag)
-
-        object_tag.object_id = "object:id"
-        object_tag.object_type = "object:type"
-        assert taxonomy.validate_object_tag(object_tag)
+        # ClosedObjectTags require a tag
+        object_tag.taxonomy.allow_free_text = False
+        object_tag = self.taxonomy.object_tag_class().copy(object_tag)
+        assert not object_tag.is_valid()
+        object_tag.tag = self.tag
+        assert object_tag.is_valid()
 
     def test_tag_object(self):
         self.taxonomy.allow_multiple = True
@@ -306,7 +302,7 @@ class TestModelObjectTag(TestTagTaxonomyMixin, TestCase):
             assert len(object_tags) == len(tag_list)
             for index, object_tag in enumerate(object_tags):
                 assert object_tag.tag_id == tag_list[index]
-                assert object_tag.is_valid
+                assert object_tag.is_valid()
                 assert object_tag.taxonomy == self.taxonomy
                 assert object_tag.name == self.taxonomy.name
                 assert object_tag.object_id == "biology101"
@@ -322,7 +318,7 @@ class TestModelObjectTag(TestTagTaxonomyMixin, TestCase):
         )
         assert len(object_tags) == 1
         object_tag = object_tags[0]
-        assert object_tag.is_valid
+        assert object_tag.is_valid()
         assert object_tag.taxonomy == self.taxonomy
         assert object_tag.name == self.taxonomy.name
         assert object_tag.tag_ref == "Eukaryota Xenomorph"
