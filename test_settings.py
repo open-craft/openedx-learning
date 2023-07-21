@@ -33,8 +33,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     # Admin
-    #    'django.contrib.admin',
-    #    'django.contrib.admindocs',
+    'django.contrib.admin',
+    'django.contrib.admindocs',
     # django-rules based authorization
     'rules.apps.AutodiscoverRulesConfig',
     # Our own apps
