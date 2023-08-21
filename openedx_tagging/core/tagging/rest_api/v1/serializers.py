@@ -56,27 +56,13 @@ class ObjectTagSerializer(serializers.ModelSerializer):
             "is_valid",
         ]
 
-# ToDo: Remove
-# class ObjectTagUpdateItemSerializer(serializers.Serializer):
-#     """
-#     Serialize for a single ObjectTag item
-#     """
-#     id = serializers.CharField(required=False)
-#     value = serializers.CharField(required=False)
-
-#     def validate(self, attrs):
-#         if attrs['id'] and attrs['value']:
-#             raise serializers.ValidationError('A tag should be referenced by either id or value, not both')
-#         if not (attrs['id'] or attrs['value']):
-#             raise serializers.ValidationError('A tag should be referenced by either id or value')
-
-#         return attrs
 
 class ObjectTagUpdateBodySerializer(serializers.Serializer):
     """
     Serializer of the body for the ObjectTag UPDATE view
     """
     tags = serializers.ListField(child=serializers.CharField(), required=True)
+
 
 class ObjectTagUpdateQueryParamsSerializer(serializers.Serializer):
     """
