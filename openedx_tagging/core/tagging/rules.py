@@ -47,18 +47,20 @@ def can_change_tag(user: User, tag: Tag = None) -> bool:
 
 
 @rules.predicate
-def can_change_object_tag(user: User, object_tag: ObjectTag = None) -> bool:
+def can_change_object_tag(user: User, taxonomy: Taxonomy = None) -> bool:
     """
-    Taxonomy admins can create or modify object tags on enabled taxonomies.
-    """
-    taxonomy = (
-        object_tag.taxonomy.cast() if (object_tag and object_tag.taxonomy_id) else None
-    )
-    object_tag = taxonomy.object_tag_class.cast(object_tag) if taxonomy else object_tag
-    return is_taxonomy_admin(user) and (
-        not object_tag or not taxonomy or (taxonomy and taxonomy.enabled)
-    )
+    Everyone can potentially create/edit object tags (taxonomy=None). The object permission must be checked
+    to determine if the user can create/edit a object_tag for a specific taxonomy.
 
+    Everyone can create or modify object tags on enabled taxonomies.
+    Only taxonomy admins can create or modify object tags on disabled taxonomies.
+    """
+    if not taxonomy:
+        return True
+
+    taxonomy = taxonomy.cast()
+
+    return taxonomy.enabled or is_taxonomy_admin(user)
 
 # Taxonomy
 rules.add_perm("oel_tagging.add_taxonomy", can_change_taxonomy)

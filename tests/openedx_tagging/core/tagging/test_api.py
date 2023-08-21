@@ -1,6 +1,7 @@
 """ Test the tagging APIs """
 import ddt
 
+from django.db import IntegrityError
 from django.test.testcases import TestCase, override_settings
 
 import openedx_tagging.core.tagging.api as tagging_api
@@ -333,9 +334,90 @@ class TestApiTagging(TestTagTaxonomyMixin, TestCase):
                 ["Eukaryota Xenomorph"],
                 "biology101",
             )
-        assert "Invalid object tag for taxonomy (1): Eukaryota Xenomorph" in str(
-            exc.exception
+        assert "Invalid object tag for taxonomy (1): Eukaryota Xenomorph" in str(exc.exception)
+
+    def test_tag_object_string(self):
+        with self.assertRaises(ValueError) as exc:
+            tagging_api.tag_object(
+                self.taxonomy,
+                'string',
+                "biology101",
+            )
+        assert "Tags must be a list, not str." in str(exc.exception)
+
+    def test_tag_object_integer(self):
+        with self.assertRaises(ValueError) as exc:
+            tagging_api.tag_object(
+                self.taxonomy,
+                1,
+                "biology101",
+            )
+        assert "Tags must be a list, not int." in str(exc.exception)
+
+    def test_tag_object_same_id(self):
+        # Tag the object with the same value twice
+        tagging_api.tag_object(
+            self.taxonomy,
+            [self.eubacteria.id],
+            "biology101",
         )
+        tagging_api.tag_object(
+            self.taxonomy,
+            [self.eubacteria.id],
+            "biology101",
+        )
+        tagging_api.tag_object(
+            self.taxonomy,
+            ["Eubacteria"],
+            "biology101",
+        )
+
+    def test_tag_object_same_value(self):
+        # Tag the object with the same value twice
+        tagging_api.tag_object(
+            self.taxonomy,
+            ["Eubacteria"],
+            "biology101",
+        )
+        tagging_api.tag_object(
+            self.taxonomy,
+            ["Eubacteria"],
+            "biology101",
+        )
+
+    def test_tag_object_same_id_multiple(self):
+        self.taxonomy.allow_multiple = True
+        self.taxonomy.save()
+        # Tag the object with the same value twice
+        object_tags = tagging_api.tag_object(
+            self.taxonomy,
+            [self.eubacteria.id, self.eubacteria.id],
+            "biology101",
+        )
+        assert len(object_tags) == 1
+
+    def test_tag_object_same_value_multiple(self):
+        self.taxonomy.allow_multiple = True
+        self.taxonomy.save()
+        # Tag the object with the same value twice
+        object_tags = tagging_api.tag_object(
+            self.taxonomy,
+            ["Eubacteria", "Eubacteria"],
+            "biology101",
+        )
+        assert len(object_tags) == 1
+
+    def test_tag_object_same_value_multiple_free(self):
+        self.taxonomy.allow_multiple = True
+        self.taxonomy.allow_free_text = True
+        self.taxonomy.save()
+        # Tag the object with the same value twice
+        object_tags = tagging_api.tag_object(
+            self.taxonomy,
+            ["tag1", "tag1"],
+            "biology101",
+        )
+        assert len(object_tags) == 1
 
     @override_settings(LANGUAGES=test_languages)
     def test_tag_object_language_taxonomy(self):
