@@ -138,7 +138,9 @@ class TaxonomyView(ModelViewSet):
         If you want the disabled taxonomies, pass enabled=False.
         If you want the enabled taxonomies, pass enabled=True.
         """
-        query_params = TaxonomyListQueryParamsSerializer(data=self.request.query_params.dict())
+        query_params = TaxonomyListQueryParamsSerializer(
+            data=self.request.query_params.dict()
+        )
         query_params.is_valid(raise_exception=True)
         enabled = query_params.data.get("enabled", None)
 
@@ -206,7 +208,9 @@ class ObjectTagView(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.L
         If a taxonomy is passed in, object tags are limited to that taxonomy.
         """
         object_id = self.kwargs.get("object_id")
-        query_params = ObjectTagListQueryParamsSerializer(data=self.request.query_params.dict())
+        query_params = ObjectTagListQueryParamsSerializer(
+            data=self.request.query_params.dict()
+        )
         query_params.is_valid(raise_exception=True)
         taxonomy_id = query_params.data.get("taxonomy", None)
         return get_object_tags(object_id, taxonomy_id)

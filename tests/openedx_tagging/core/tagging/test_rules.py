@@ -91,7 +91,9 @@ class TestRulesTagging(TestTagTaxonomyMixin, TestCase):
         assert self.staff.has_perm("oel_tagging.view_taxonomy")
         assert self.staff.has_perm("oel_tagging.view_taxonomy", self.taxonomy)
         assert self.learner.has_perm("oel_tagging.view_taxonomy")
-        assert self.learner.has_perm("oel_tagging.view_taxonomy", self.taxonomy) == enabled
+        assert (
+            self.learner.has_perm( "oel_tagging.view_taxonomy", self.taxonomy) == enabled
+        )
 
     # Tag
 
