@@ -10,26 +10,24 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('oel_containers', '0001_initial'),
-        ('oel_publishing', '0002_alter_learningpackage_key_and_more'),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Unit',
+            name='UnitVersion',
             fields=[
-                ('publishable_entity', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='oel_publishing.publishableentity')),
-                ('container', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='oel_containers.container')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('container_version', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='oel_containers.containerversion')),
             ],
             options={
                 'abstract': False,
             },
         ),
         migrations.CreateModel(
-            name='UnitVersion',
+            name='Unit',
             fields=[
-                ('publishable_entity_version', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='oel_publishing.publishableentityversion')),
-                ('container_version', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='oel_containers.containerversion')),
-                ('unit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='versions', to='oel_units.unit')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('container', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='oel_containers.container')),
             ],
             options={
                 'abstract': False,

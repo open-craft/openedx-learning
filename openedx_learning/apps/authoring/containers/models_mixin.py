@@ -8,10 +8,6 @@ from typing import ClassVar, Self
 from django.db import models
 
 from openedx_learning.apps.authoring.containers.models import Container, ContainerVersion
-from openedx_learning.apps.authoring.publishing.model_mixins import (
-    PublishableEntityMixin,
-    PublishableEntityVersionMixin,
-)
 from openedx_learning.lib.managers import WithRelationsManager
 
 __all__ = [
@@ -20,17 +16,20 @@ __all__ = [
 ]
 
 
-class ContainerMixin(PublishableEntityMixin):
+class ContainerMixin(models.Model):
     """
     Convenience mixin to link your models against Container.
 
     Please see docstring for Container for more details.
-
-    If you use this class, you *MUST* also use ContainerVersionMixin
     """
 
     # select these related entities by default for all queries
-    objects: ClassVar[WithRelationsManager[Self]] = WithRelationsManager("container")  # type: ignore[assignment]
+    objects: ClassVar[WithRelationsManager[Self]] = WithRelationsManager(  # type: ignore[assignment]
+        "container",
+        "container__publishable_entity",
+        "container__publishable_entity__published",
+        "container__publishable_entity__draft",
+    )
 
     container = models.OneToOneField(
         Container,
@@ -49,18 +48,17 @@ class ContainerMixin(PublishableEntityMixin):
         abstract = True
 
 
-class ContainerVersionMixin(PublishableEntityVersionMixin):
+class ContainerVersionMixin(models.Model):
     """
     Convenience mixin to link your models against ContainerVersion.
 
     Please see docstring for ContainerVersion for more details.
-
-    If you use this class, you *MUST* also use ContainerMixin
     """
 
     # select these related entities by default for all queries
     objects: ClassVar[WithRelationsManager[Self]] = WithRelationsManager(  # type: ignore[assignment]
         "container_version",
+        "container_version__publishable_entity_version",
     )
 
     container_version = models.OneToOneField(

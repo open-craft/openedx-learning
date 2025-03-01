@@ -115,7 +115,7 @@ class UnitTestCase(ComponentTestCase):
                 created_by=None,
             )
         # Check that a new version was not created:
-        assert unit.versioning.draft == unit_version
+        assert unit.container.versioning.draft == unit_version.container_version
 
     def test_adding_external_components(self):
         """
@@ -172,10 +172,10 @@ class UnitTestCase(ComponentTestCase):
         )
         assert unit, unit_version
         assert unit_version.version_num == 1
-        assert unit_version in unit.versioning.versions.all()
-        assert unit.versioning.has_unpublished_changes
-        assert unit.versioning.draft == unit_version
-        assert unit.versioning.published is None
+        assert unit_version.container_version in unit.container.versioning.versions.all()
+        assert unit.container.versioning.has_unpublished_changes
+        assert unit.container.versioning.draft == unit_version.container_version
+        assert unit.container.versioning.published is None
 
     def test_create_next_unit_version_with_two_unpinned_components(self):
         """Test creating a unit version with two unpinned components.
@@ -201,7 +201,7 @@ class UnitTestCase(ComponentTestCase):
             created_by=None,
         )
         assert unit_version_v2.version_num == 2
-        assert unit_version_v2 in unit.versioning.versions.all()
+        assert unit_version_v2.container_version in unit.container.versioning.versions.all()
         assert authoring_api.get_components_in_draft_unit(unit) == [
             Entry(self.component_1.versioning.draft),
             Entry(self.component_2.versioning.draft),
@@ -227,7 +227,7 @@ class UnitTestCase(ComponentTestCase):
             created_by=None,
         )
         assert unit_version_v2.version_num == 2
-        assert unit_version_v2 in unit.versioning.versions.all()
+        assert unit_version_v2.container_version in unit.container.versioning.versions.all()
         assert authoring_api.get_components_in_draft_unit(unit) == [
             Entry(self.component_1_v1),
             Entry(self.component_2_v1, pinned=True),  # Pinned 📌 to v1
@@ -256,7 +256,7 @@ class UnitTestCase(ComponentTestCase):
         # Now all changes to the unit and to component 1 are published:
         unit.refresh_from_db()
         self.component_1.refresh_from_db()
-        assert unit.versioning.has_unpublished_changes is False  # Shallow check
+        assert unit.container.versioning.has_unpublished_changes is False  # Shallow check
         assert self.component_1.versioning.has_unpublished_changes is False
         assert authoring_api.contains_unpublished_changes(unit) is False  # Deep check
         assert self.component_1.versioning.published == self.component_1_v1  # v1 is now the published version.
@@ -272,7 +272,7 @@ class UnitTestCase(ComponentTestCase):
         """
         # Create a draft unit with two draft components
         unit = self.create_unit_with_components([self.component_1, self.component_2])
-        assert unit.versioning.has_unpublished_changes
+        assert unit.container.versioning.has_unpublished_changes
         # Publish ONLY one of its child components
         self.publish_component(self.component_1)
         self.component_1.refresh_from_db()  # Clear cache on '.versioning'
@@ -280,8 +280,8 @@ class UnitTestCase(ComponentTestCase):
 
         # The unit that contains that component should still be unpublished:
         unit.refresh_from_db()  # Clear cache on '.versioning'
-        assert unit.versioning.has_unpublished_changes
-        assert unit.versioning.published is None
+        assert unit.container.versioning.has_unpublished_changes
+        assert unit.container.versioning.published is None
         assert authoring_api.get_components_in_published_unit(unit) is None
 
     def test_add_component_after_publish(self):
@@ -296,13 +296,13 @@ class UnitTestCase(ComponentTestCase):
             created=self.now,
             created_by=None,
         )
-        assert unit.versioning.draft == unit_version
-        assert unit.versioning.published is None
-        assert unit.versioning.has_unpublished_changes
+        assert unit.container.versioning.draft == unit_version.container_version
+        assert unit.container.versioning.published is None
+        assert unit.container.versioning.has_unpublished_changes
         # Publish the empty unit:
         authoring_api.publish_all_drafts(self.learning_package.id)
         unit.refresh_from_db()  # Reloading the unit is necessary
-        assert unit.versioning.has_unpublished_changes is False  # Shallow check for just the unit itself, not children
+        assert unit.container.versioning.has_unpublished_changes is False  # Shallow check for just the unit itself, not children
         assert authoring_api.contains_unpublished_changes(unit) is False  # Deeper check
 
         # Add a published component (unpinned):
@@ -316,10 +316,10 @@ class UnitTestCase(ComponentTestCase):
         )
         # Now the unit should have unpublished changes:
         unit.refresh_from_db()  # Reloading the unit is necessary
-        assert unit.versioning.has_unpublished_changes  # Shallow check - adding a child is a change to the unit
+        assert unit.container.versioning.has_unpublished_changes  # Shallow check - adding a child is a change to the unit
         assert authoring_api.contains_unpublished_changes(unit)  # Deeper check
-        assert unit.versioning.draft == unit_version_v2
-        assert unit.versioning.published == unit_version
+        assert unit.container.versioning.draft == unit_version_v2.container_version
+        assert unit.container.versioning.published == unit_version.container_version
 
     def test_modify_unpinned_component_after_publish(self):
         """
@@ -331,13 +331,13 @@ class UnitTestCase(ComponentTestCase):
         # Create a unit with one unpinned draft component:
         assert self.component_1.versioning.has_unpublished_changes
         unit = self.create_unit_with_components([self.component_1])
-        assert unit.versioning.has_unpublished_changes
+        assert unit.container.versioning.has_unpublished_changes
 
         # Publish the unit and the component:
         authoring_api.publish_all_drafts(self.learning_package.id)
         unit.refresh_from_db()  # Reloading the unit is necessary if we accessed 'versioning' before publish
         self.component_1.refresh_from_db()
-        assert unit.versioning.has_unpublished_changes is False  # Shallow check
+        assert unit.container.versioning.has_unpublished_changes is False  # Shallow check
         assert authoring_api.contains_unpublished_changes(unit) is False  # Deeper check
         assert self.component_1.versioning.has_unpublished_changes is False
 
@@ -347,7 +347,7 @@ class UnitTestCase(ComponentTestCase):
         # The component now has unpublished changes; the unit doesn't directly but does contain
         unit.refresh_from_db()  # Reloading the unit is necessary, or 'unit.versioning' will be outdated
         self.component_1.refresh_from_db()
-        assert unit.versioning.has_unpublished_changes is False  # Shallow check should be false - unit is unchanged
+        assert unit.container.versioning.has_unpublished_changes is False  # Shallow check should be false - unit is unchanged
         assert authoring_api.contains_unpublished_changes(unit)  # But unit DOES contain changes
         assert self.component_1.versioning.has_unpublished_changes
 
@@ -391,7 +391,7 @@ class UnitTestCase(ComponentTestCase):
         # The component now has unpublished changes; the unit is entirely unaffected
         unit.refresh_from_db()  # Reloading the unit is necessary, or 'unit.versioning' will be outdated
         self.component_1.refresh_from_db()
-        assert unit.versioning.has_unpublished_changes is False  # Shallow check
+        assert unit.container.versioning.has_unpublished_changes is False  # Shallow check
         assert authoring_api.contains_unpublished_changes(unit) is False  # Deep check
         assert self.component_1.versioning.has_unpublished_changes is True
 
@@ -479,8 +479,8 @@ class UnitTestCase(ComponentTestCase):
         # (But the units themselves are unchanged:)
         unit1.refresh_from_db()
         unit2.refresh_from_db()
-        assert unit1.versioning.has_unpublished_changes is False
-        assert unit2.versioning.has_unpublished_changes is False
+        assert unit1.container.versioning.has_unpublished_changes is False
+        assert unit2.container.versioning.has_unpublished_changes is False
 
         # 3️⃣ In addition to this, the author also modifies another component in Unit 2 (C5)
         c5_v2 = self.modify_component(c5, title="C5 version 2")
@@ -491,7 +491,7 @@ class UnitTestCase(ComponentTestCase):
             self.learning_package.pk,
             draft_qset=authoring_api.get_all_drafts(self.learning_package.pk).filter(
                 entity_id__in=[
-                    unit1.publishable_entity.id,
+                    unit1.container.publishable_entity_id,
                     c1.publishable_entity.id,
                     c2.publishable_entity.id,
                     c3.publishable_entity.id,
@@ -612,7 +612,7 @@ class UnitTestCase(ComponentTestCase):
             Entry(self.component_1_v1),
         ]
         unit.refresh_from_db()
-        assert unit.versioning.has_unpublished_changes  # The unit itself and its component list have change
+        assert unit.container.versioning.has_unpublished_changes  # The unit itself and its component list have change
         assert authoring_api.contains_unpublished_changes(unit)
         # The published version of the unit is not yet affected:
         assert authoring_api.get_components_in_published_unit(unit) == [
@@ -648,7 +648,7 @@ class UnitTestCase(ComponentTestCase):
             # unit's component list but has been soft deleted, and will be fully deleted when published, or restored if
             # reverted?
         ]
-        assert unit.versioning.has_unpublished_changes is False  # The unit itself and its component list is not changed
+        assert unit.container.versioning.has_unpublished_changes is False  # The unit itself and its component list is not changed
         assert authoring_api.contains_unpublished_changes(unit)  # But it CONTAINS an unpublished change (a deletion)
         # The published version of the unit is not yet affected:
         assert authoring_api.get_components_in_published_unit(unit) == [
@@ -682,7 +682,7 @@ class UnitTestCase(ComponentTestCase):
         assert authoring_api.get_components_in_draft_unit(unit) == [
             Entry(self.component_1_v1),
         ]
-        assert unit.versioning.has_unpublished_changes is True
+        assert unit.container.versioning.has_unpublished_changes is True
         assert authoring_api.contains_unpublished_changes(unit)
         # The published version of the unit is not yet affected:
         assert authoring_api.get_components_in_published_unit(unit) == [
@@ -710,7 +710,7 @@ class UnitTestCase(ComponentTestCase):
             Entry(self.component_1_v1, pinned=True),
             Entry(self.component_2_v1, pinned=True),
         ]
-        assert unit.versioning.has_unpublished_changes is False  # The unit itself and its component list is not changed
+        assert unit.container.versioning.has_unpublished_changes is False  # The unit itself and its component list is not changed
         assert authoring_api.contains_unpublished_changes(unit) is False  # nor does it contain changes
         # The published version of the unit is also not affected:
         assert authoring_api.get_components_in_published_unit(unit) == [
@@ -731,11 +731,11 @@ class UnitTestCase(ComponentTestCase):
         # Publish everything:
         authoring_api.publish_all_drafts(self.learning_package.id)
         # Delete the unit:
-        authoring_api.soft_delete_draft(unit_to_delete.publishable_entity_id)
+        authoring_api.soft_delete_draft(unit_to_delete.container.publishable_entity_id)
         unit_to_delete.refresh_from_db()
         # Now the draft unit is [soft] deleted, but the components, published unit, and other unit is unaffected:
-        assert unit_to_delete.versioning.draft is None  # Unit is soft deleted.
-        assert unit_to_delete.versioning.published is not None
+        assert unit_to_delete.container.versioning.draft is None  # Unit is soft deleted.
+        assert unit_to_delete.container.versioning.published is not None
         self.component_1.refresh_from_db()
         assert self.component_1.versioning.draft is not None
         assert authoring_api.get_components_in_draft_unit(other_unit) == [Entry(self.component_1_v1)]
@@ -744,8 +744,8 @@ class UnitTestCase(ComponentTestCase):
         authoring_api.publish_all_drafts(self.learning_package.id)
         # Now the unit's published version is also deleted, but nothing else is affected.
         unit_to_delete.refresh_from_db()
-        assert unit_to_delete.versioning.draft is None  # Unit is soft deleted.
-        assert unit_to_delete.versioning.published is None
+        assert unit_to_delete.container.versioning.draft is None  # Unit is soft deleted.
+        assert unit_to_delete.container.versioning.published is None
         self.component_1.refresh_from_db()
         assert self.component_1.versioning.draft is not None
         assert self.component_1.versioning.published is not None
