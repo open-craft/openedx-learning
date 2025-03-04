@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from functools import cached_property
-from typing import ClassVar, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Self
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
@@ -50,15 +50,15 @@ class PublishableEntityMixin(models.Model):
         return self.VersioningHelper(self)
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         return self.publishable_entity.uuid
 
     @property
-    def key(self):
+    def key(self) -> str:
         return self.publishable_entity.key
 
     @property
-    def created(self):
+    def created(self) -> datetime:
         return self.publishable_entity.created
 
     @property
@@ -305,19 +305,19 @@ class PublishableEntityVersionMixin(models.Model):
     )
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         return self.publishable_entity_version.uuid
 
     @property
-    def title(self):
+    def title(self) -> str:
         return self.publishable_entity_version.title
 
     @property
-    def created(self):
+    def created(self) -> datetime:
         return self.publishable_entity_version.created
 
     @property
-    def version_num(self):
+    def version_num(self) -> int:
         return self.publishable_entity_version.version_num
 
     class Meta:
