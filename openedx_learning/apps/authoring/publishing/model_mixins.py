@@ -3,20 +3,24 @@ Helper mixin classes for content apps that want to use the publishing app.
 """
 from __future__ import annotations
 
+from datetime import datetime
 from functools import cached_property
-from typing import ClassVar, Self
+from typing import ClassVar, Self, TYPE_CHECKING
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 
 from openedx_learning.lib.managers import WithRelationsManager
 
-from .models import PublishableEntity, PublishableEntityVersion
+if TYPE_CHECKING:
+    from .models import PublishableEntityVersion
 
 __all__ = [
     "PublishableEntityMixin",
     "PublishableEntityVersionMixin",
     "PublishableContentModelRegistry",
+    "ContainerMixin",
+    "ContainerVersionMixin",
 ]
 
 
@@ -38,7 +42,7 @@ class PublishableEntityMixin(models.Model):
     )
 
     publishable_entity = models.OneToOneField(
-        PublishableEntity, on_delete=models.CASCADE, primary_key=True
+        "oel_publishing.PublishableEntity", on_delete=models.CASCADE, primary_key=True
     )
 
     @cached_property
@@ -297,7 +301,7 @@ class PublishableEntityVersionMixin(models.Model):
     )
 
     publishable_entity_version = models.OneToOneField(
-        PublishableEntityVersion, on_delete=models.CASCADE, primary_key=True
+        "oel_publishing.PublishableEntityVersion", on_delete=models.CASCADE, primary_key=True
     )
 
     @property
@@ -360,3 +364,71 @@ class PublishableContentModelRegistry:
     @classmethod
     def get_unversioned_model_cls(cls, content_version_model_cls):
         return cls._versioned_to_unversioned[content_version_model_cls]
+
+
+class ContainerMixin(PublishableEntityMixin):
+    """
+    Convenience mixin to link your models against Container.
+
+    Please see docstring for Container for more details.
+
+    If you use this class, you *MUST* also use ContainerVersionMixin
+    """
+
+    # select these related entities by default for all queries
+    objects: ClassVar[WithRelationsManager[Self]] = WithRelationsManager("container")  # type: ignore[assignment]
+
+    container = models.OneToOneField(
+        "oel_publishing.Container",
+        on_delete=models.CASCADE,
+    )
+
+    @property
+    def uuid(self) -> str:
+        return self.container.uuid
+
+    @property
+    def created(self) -> datetime:
+        return self.container.created
+
+    class Meta:
+        abstract = True
+
+
+class ContainerVersionMixin(PublishableEntityVersionMixin):
+    """
+    Convenience mixin to link your models against ContainerVersion.
+
+    Please see docstring for ContainerVersion for more details.
+
+    If you use this class, you *MUST* also use ContainerMixin
+    """
+
+    # select these related entities by default for all queries
+    objects: ClassVar[WithRelationsManager[Self]] = WithRelationsManager(  # type: ignore[assignment]
+        "container_version",
+    )
+
+    container_version = models.OneToOneField(
+        "oel_publishing.ContainerVersion",
+        on_delete=models.CASCADE,
+    )
+
+    @property
+    def uuid(self) -> str:
+        return self.container_version.uuid
+
+    @property
+    def title(self) -> str:
+        return self.container_version.title
+
+    @property
+    def created(self) -> datetime:
+        return self.container_version.created
+
+    @property
+    def version_num(self) -> int:
+        return self.container_version.version_num
+
+    class Meta:
+        abstract = True
