@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('publishable_entity_version', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='oel_publishing.publishableentityversion')),
                 ('container', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='versions', to='oel_publishing.container')),
-                ('entity_list', models.ForeignKey(on_delete=django.db.models.deletion.RESTRICT, related_name='entity_list', to='oel_publishing.entitylist')),
+                ('entity_list', models.ForeignKey(on_delete=django.db.models.deletion.RESTRICT, related_name='container_versions', to='oel_publishing.entitylist')),
             ],
             options={
                 'abstract': False,

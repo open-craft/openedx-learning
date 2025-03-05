@@ -627,5 +627,5 @@ class ContainerVersion(PublishableEntityVersionMixin):
         EntityList,
         on_delete=models.RESTRICT,
         null=False,
-        related_name="entity_list",
+        related_name="container_versions",
     )
