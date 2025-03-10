@@ -1,9 +1,8 @@
 """
 Models that implement units
 """
-from django.db import models
 
-from ..publishing.model_mixins import ContainerMixin, ContainerVersionMixin
+from ..publishing.models import Container, ContainerVersion
 
 __all__ = [
     "Unit",
@@ -11,21 +10,24 @@ __all__ = [
 ]
 
 
-class Unit(ContainerMixin):
+class Unit(Container):
     """
     A Unit is Container, which is a PublishableEntity.
     """
+    CONTAINER_TYPE = "unit"
+
+    class Meta:
+        proxy = True
 
 
-class UnitVersion(ContainerVersionMixin):
+class UnitVersion(ContainerVersion):
     """
     A UnitVersion is a ContainerVersion, which is a PublishableEntityVersion.
     """
 
-    # Not sure what other metadata goes here, but we want to try to separate things
-    # like scheduling information and such into different models.
-    unit = models.ForeignKey(
-        Unit,
-        on_delete=models.CASCADE,
-        related_name="versions",
-    )
+    @property
+    def unit(self):
+        return Unit.objects.get(pk=self.container_id)
+
+    class Meta:
+        proxy = True

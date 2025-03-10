@@ -13,12 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import F, Q, QuerySet
 from django.db.transaction import atomic
 
-from .model_mixins import (
-    ContainerMixin,
-    PublishableContentModelRegistry,
-    PublishableEntityMixin,
-    PublishableEntityVersionMixin,
-)
+from .model_mixins import PublishableContentModelRegistry, PublishableEntityMixin, PublishableEntityVersionMixin
 from .models import (
     Container,
     ContainerVersion,
@@ -579,6 +574,7 @@ def get_published_version_as_of(entity_id: int, publish_log_id: int) -> Publisha
 def create_container(
     learning_package_id: int,
     key: str,
+    container_type: str,
     created: datetime,
     created_by: int | None,
 ) -> Container:
@@ -595,12 +591,14 @@ def create_container(
     Returns:
         The newly created container.
     """
+    assert container_type  # Shouldn't be empty/none
     with atomic():
         publishable_entity = create_publishable_entity(
             learning_package_id, key, created, created_by
         )
         container = Container.objects.create(
             publishable_entity=publishable_entity,
+            container_type=container_type,
         )
     return container
 
@@ -635,7 +633,7 @@ def create_entity_list_with_rows(
         The newly created entity list.
     """
     order_nums = range(len(entity_pks))
-    with atomic():
+    with atomic(savepoint=False):
         entity_list = create_entity_list()
         EntityListRow.objects.bulk_create(
             [
@@ -679,7 +677,7 @@ def create_container_version(
     Returns:
         The newly created container version.
     """
-    with atomic():
+    with atomic(savepoint=False):
         container = Container.objects.select_related("publishable_entity").get(pk=container_pk)
         entity = container.publishable_entity
 
@@ -789,6 +787,7 @@ def create_container_and_version(
     learning_package_id: int,
     key: str,
     *,
+    container_type: str,
     created: datetime,
     created_by: int | None,
     title: str,
@@ -812,7 +811,7 @@ def create_container_and_version(
         The newly created container version.
     """
     with atomic():
-        container = create_container(learning_package_id, key, created, created_by)
+        container = create_container(learning_package_id, key, container_type, created, created_by)
         container_version = create_container_version(
             container.publishable_entity.pk,
             1,
@@ -854,15 +853,13 @@ class ContainerEntityListEntry:
 
 
 def get_entities_in_draft_container(
-    container: Container | ContainerMixin,
+    container: Container,
 ) -> list[ContainerEntityListEntry]:
     """
     [ 🛑 UNSTABLE ]
     Get the list of entities and their versions in the draft version of the
     given container.
     """
-    if isinstance(container, ContainerMixin):
-        container = container.container
     assert isinstance(container, Container)
     entity_list = []
     for row in container.versioning.draft.entity_list.entitylistrow_set.order_by("order_num"):
@@ -877,19 +874,15 @@ def get_entities_in_draft_container(
 
 
 def get_entities_in_published_container(
-    container: Container | ContainerMixin,
+    container: Container,
 ) -> list[ContainerEntityListEntry] | None:
     """
     [ 🛑 UNSTABLE ]
     Get the list of entities and their versions in the published version of the
     given container.
     """
-    if isinstance(container, ContainerMixin):
-        cv = container.container.versioning.published
-    elif isinstance(container, Container):
-        cv = container.versioning.published
-    else:
-        raise TypeError(f"Expected Container or ContainerMixin; got {type(container)}")
+    assert isinstance(container, Container)
+    cv = container.versioning.published
     if cv is None:
         return None  # There is no published version of this container. Should this be an exception?
     assert isinstance(cv, ContainerVersion)
@@ -905,9 +898,7 @@ def get_entities_in_published_container(
     return entity_list
 
 
-def contains_unpublished_changes(
-    container: Container | ContainerMixin,
-) -> bool:
+def contains_unpublished_changes(container_id: int) -> bool:
     """
     [ 🛑 UNSTABLE ]
     Check recursively if a container has any unpublished changes.
@@ -920,14 +911,10 @@ def contains_unpublished_changes(
     that's in the container, it will be `False`. This method will return `True`
     in either case.
     """
-    if isinstance(container, ContainerMixin):
-        # This is similar to 'get_container(container.container_id)' but pre-loads more data.
-        container = Container.objects.select_related(
-            "publishable_entity__draft__version__containerversion__entity_list",
-        ).get(pk=container.container_id)
-    else:
-        pass  # TODO: select_related if we're given a raw Container rather than a ContainerMixin like Unit?
-    assert isinstance(container, Container)
+    # This is similar to 'get_container(container.container_id)' but pre-loads more data.
+    container = Container.objects.select_related(
+        "publishable_entity__draft__version__containerversion__entity_list",
+    ).get(pk=container_id)
 
     if container.versioning.has_unpublished_changes:
         return True
@@ -949,7 +936,7 @@ def contains_unpublished_changes(
             child_container = None
         if child_container:
             # This is itself a container - check recursively:
-            if contains_unpublished_changes(child_container):
+            if contains_unpublished_changes(child_container.pk):
                 return True
         else:
             # This is not a container:
