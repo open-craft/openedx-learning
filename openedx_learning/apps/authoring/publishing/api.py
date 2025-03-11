@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import TypeVar
 
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import F, Q, QuerySet
@@ -27,6 +28,9 @@ from .models import (
     PublishLog,
     PublishLogRecord,
 )
+
+ContainerModel = TypeVar('ContainerModel', bound=Container)
+ContainerVersionModel = TypeVar('ContainerVersionModel', bound=ContainerVersion)
 
 # The public API that will be re-exported by openedx_learning.apps.authoring.api
 # is listed in the __all__ entries below. Internal helper functions that are
@@ -61,7 +65,6 @@ __all__ = [
     "create_container",
     "create_container_version",
     "create_next_container_version",
-    "create_container_and_version",
     "get_container",
     "ContainerEntityListEntry",
     "get_entities_in_draft_container",
@@ -576,8 +579,9 @@ def create_container(
     key: str,
     created: datetime,
     created_by: int | None,
-    container_model: type[Container] = Container,
-) -> Container:
+    # The types on the following line are correct, but mypy will complain - https://github.com/python/mypy/issues/3737
+    container_model: type[ContainerModel] = Container,  # type: ignore[assignment]
+) -> ContainerModel:
     """
     [ 🛑 UNSTABLE ]
     Create a new container.
@@ -587,6 +591,7 @@ def create_container(
         key: The key of the container.
         created: The date and time the container was created.
         created_by: The ID of the user who created the container
+        container_model: The subclass of Container to use, if applicable
 
     Returns:
         The newly created container.
@@ -658,8 +663,8 @@ def create_container_version(
     entity_version_pks: list[int | None] | None,
     created: datetime,
     created_by: int | None,
-    container_version_model: type[ContainerVersion] = ContainerVersion,
-) -> ContainerVersion:
+    container_version_model: type[ContainerVersionModel] = ContainerVersion,  # type: ignore[assignment]
+) -> ContainerVersionModel:
     """
     [ 🛑 UNSTABLE ]
     Create a new container version.
@@ -721,8 +726,8 @@ def create_next_container_version(
     entity_version_pks: list[int | None] | None,
     created: datetime,
     created_by: int | None,
-    container_version_model: type[ContainerVersion] = ContainerVersion,
-) -> ContainerVersion:
+    container_version_model: type[ContainerVersionModel] = ContainerVersion,  # type: ignore[assignment]
+) -> ContainerVersionModel:
     """
     [ 🛑 UNSTABLE ]
     Create the next version of a container. A new version of the container is created
@@ -783,46 +788,6 @@ def create_next_container_version(
         )
 
     return next_container_version
-
-
-def create_container_and_version(
-    learning_package_id: int,
-    key: str,
-    *,
-    created: datetime,
-    created_by: int | None,
-    title: str,
-    publishable_entities_pks: list[int],
-    entity_version_pks: list[int | None],
-) -> tuple[Container, ContainerVersion]:
-    """
-    [ 🛑 UNSTABLE ]
-    Create a new container and its first version.
-
-    Args:
-        learning_package_id: The ID of the learning package that contains the container.
-        key: The key of the container.
-        created: The date and time the container was created.
-        created_by: The ID of the user who created the container.
-        version_num: The version number of the container.
-        title: The title of the container.
-        members_pk: The IDs of the members of the container.
-
-    Returns:
-        The newly created container version.
-    """
-    with atomic():
-        container = create_container(learning_package_id, key, created, created_by)
-        container_version = create_container_version(
-            container.publishable_entity.pk,
-            1,
-            title=title,
-            publishable_entities_pks=publishable_entities_pks,
-            entity_version_pks=entity_version_pks,
-            created=created,
-            created_by=created_by,
-        )
-    return (container, container_version)
 
 
 def get_container(pk: int) -> Container:
