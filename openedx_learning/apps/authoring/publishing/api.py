@@ -576,6 +576,7 @@ def create_container(
     key: str,
     created: datetime,
     created_by: int | None,
+    container_model: type[Container] = Container,
 ) -> Container:
     """
     [ 🛑 UNSTABLE ]
@@ -594,7 +595,7 @@ def create_container(
         publishable_entity = create_publishable_entity(
             learning_package_id, key, created, created_by
         )
-        container = Container.objects.create(
+        container = container_model.objects.create(
             publishable_entity=publishable_entity,
         )
     return container
@@ -657,6 +658,7 @@ def create_container_version(
     entity_version_pks: list[int | None] | None,
     created: datetime,
     created_by: int | None,
+    container_version_model: type[ContainerVersion] = ContainerVersion,
 ) -> ContainerVersion:
     """
     [ 🛑 UNSTABLE ]
@@ -670,6 +672,7 @@ def create_container_version(
         entity_version_pks: The IDs of the versions to pin to, if pinning is desired.
         created: The date and time the container version was created.
         created_by: The ID of the user who created the container version.
+        container_version_model: The subclass of ContainerVersion to use, if applicable.
 
     Returns:
         The newly created container version.
@@ -701,7 +704,7 @@ def create_container_version(
             created=created,
             created_by=created_by,
         )
-        container_version = ContainerVersion.objects.create(
+        container_version = container_version_model.objects.create(
             publishable_entity_version=publishable_entity_version,
             container_id=container_pk,
             entity_list=entity_list,
@@ -718,6 +721,7 @@ def create_next_container_version(
     entity_version_pks: list[int | None] | None,
     created: datetime,
     created_by: int | None,
+    container_version_model: type[ContainerVersion] = ContainerVersion,
 ) -> ContainerVersion:
     """
     [ 🛑 UNSTABLE ]
@@ -737,6 +741,7 @@ def create_next_container_version(
         entity_version_pks: The IDs of the versions to pin to, if pinning is desired.
         created: The date and time the container version was created.
         created_by: The ID of the user who created the container version.
+        container_version_model: The subclass of ContainerVersion to use, if applicable.
 
     Returns:
         The newly created container version.
@@ -771,7 +776,7 @@ def create_next_container_version(
             created=created,
             created_by=created_by,
         )
-        next_container_version = ContainerVersion.objects.create(
+        next_container_version = container_version_model.objects.create(
             publishable_entity_version=publishable_entity_version,
             container_id=container_pk,
             entity_list=next_entity_list,

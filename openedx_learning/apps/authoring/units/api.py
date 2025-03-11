@@ -41,14 +41,13 @@ def create_unit(
         created: The creation date.
         created_by: The user who created the unit.
     """
-    with atomic():
-        container = publishing_api.create_container(
-            learning_package_id,
-            key,
-            created,
-            created_by,
-        )
-        return Unit.objects.create(container_id=container.pk)
+    return publishing_api.create_container(
+        learning_package_id,
+        key,
+        created,
+        created_by,
+        container_model=Unit,
+    )
 
 
 def create_unit_version(
@@ -77,20 +76,16 @@ def create_unit_version(
         created: The creation date.
         created_by: The user who created the unit.
     """
-    with atomic():
-        container_version = publishing_api.create_container_version(
-            unit.pk,
-            version_num,
-            title=title,
-            publishable_entities_pks=publishable_entities_pks,
-            entity_version_pks=entity_version_pks,
-            created=created,
-            created_by=created_by,
-        )
-        # unit_version = UnitVersion(container_version=container_version)  # 🛑 This has a bug :/
-        unit_version = UnitVersion(container_version_id=container_version.pk)
-        unit_version.save_base(raw=True)  # 🛑 private method, but calling just .save() or .create() causes a bug :/
-    return unit_version
+    return publishing_api.create_container_version(
+        unit.pk,
+        version_num,
+        title=title,
+        publishable_entities_pks=publishable_entities_pks,
+        entity_version_pks=entity_version_pks,
+        created=created,
+        created_by=created_by,
+        container_version_model=UnitVersion,
+    )
 
 
 def _pub_entities_for_components(
@@ -141,18 +136,15 @@ def create_next_unit_version(
         created_by: The user who created the unit.
     """
     publishable_entities_pks, entity_version_pks = _pub_entities_for_components(components)
-    with atomic():
-        container_version = publishing_api.create_next_container_version(
-            unit.pk,
-            title=title,
-            publishable_entities_pks=publishable_entities_pks,
-            entity_version_pks=entity_version_pks,
-            created=created,
-            created_by=created_by,
-        )
-        # unit_version = UnitVersion(container_version=container_version)  # 🛑 This has a bug :/
-        unit_version = UnitVersion(container_version_id=container_version.pk)
-        unit_version.save_base(raw=True)  # 🛑 private method, but calling just .save() or .create() causes a bug :/
+    unit_version = publishing_api.create_next_container_version(
+        unit.pk,
+        title=title,
+        publishable_entities_pks=publishable_entities_pks,
+        entity_version_pks=entity_version_pks,
+        created=created,
+        created_by=created_by,
+        container_version_model=UnitVersion,
+    )
     return unit_version
 
 

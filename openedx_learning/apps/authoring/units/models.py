@@ -22,10 +22,6 @@ class Unit(Container):
         primary_key=True,
     )
 
-    @property
-    def versioning(self):
-        return self.container.versioning
-
 
 class UnitVersion(ContainerVersion):
     """
