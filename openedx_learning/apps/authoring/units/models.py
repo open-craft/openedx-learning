@@ -1,6 +1,7 @@
 """
 Models that implement units
 """
+from django.db import models
 
 from ..publishing.models import Container, ContainerVersion
 
@@ -14,20 +15,25 @@ class Unit(Container):
     """
     A Unit is Container, which is a PublishableEntity.
     """
-    CONTAINER_TYPE = "unit"
+    container = models.OneToOneField(
+        Container,
+        on_delete=models.CASCADE,
+        parent_link=True,
+        primary_key=True,
+    )
 
-    class Meta:
-        proxy = True
+    @property
+    def versioning(self):
+        return self.container.versioning
 
 
 class UnitVersion(ContainerVersion):
     """
     A UnitVersion is a ContainerVersion, which is a PublishableEntityVersion.
     """
-
-    @property
-    def unit(self):
-        return Unit.objects.get(pk=self.container_id)
-
-    class Meta:
-        proxy = True
+    container_version = models.OneToOneField(
+        ContainerVersion,
+        on_delete=models.CASCADE,
+        parent_link=True,
+        primary_key=True,
+    )

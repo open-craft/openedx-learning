@@ -574,7 +574,6 @@ def get_published_version_as_of(entity_id: int, publish_log_id: int) -> Publisha
 def create_container(
     learning_package_id: int,
     key: str,
-    container_type: str,
     created: datetime,
     created_by: int | None,
 ) -> Container:
@@ -591,14 +590,12 @@ def create_container(
     Returns:
         The newly created container.
     """
-    assert container_type  # Shouldn't be empty/none
     with atomic():
         publishable_entity = create_publishable_entity(
             learning_package_id, key, created, created_by
         )
         container = Container.objects.create(
             publishable_entity=publishable_entity,
-            container_type=container_type,
         )
     return container
 
@@ -787,7 +784,6 @@ def create_container_and_version(
     learning_package_id: int,
     key: str,
     *,
-    container_type: str,
     created: datetime,
     created_by: int | None,
     title: str,
@@ -811,7 +807,7 @@ def create_container_and_version(
         The newly created container version.
     """
     with atomic():
-        container = create_container(learning_package_id, key, container_type, created, created_by)
+        container = create_container(learning_package_id, key, created, created_by)
         container_version = create_container_version(
             container.publishable_entity.pk,
             1,

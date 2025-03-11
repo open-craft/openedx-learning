@@ -90,26 +90,6 @@ class UnitTestCase(ComponentTestCase):
         with self.assertNumQueries(0):
             assert result.versioning.has_unpublished_changes
 
-    def test_get_unit_non_unit(self):
-        """
-        Test that get_unit() cannot retrieve other container types
-        """
-        not_unit, _version = authoring_api.create_container_and_version(
-            self.learning_package.id,
-            key="foobar",
-            container_type="NOT a unit",  # <-- the important part
-            created=self.now,
-            created_by=None,
-            title="Testing",
-            publishable_entities_pks=[],
-            entity_version_pks=[]
-        )
-        # This generic method will work:
-        authoring_api.get_container(not_unit.pk)
-        # But the unit method will not:
-        with self.assertRaises(authoring_models.Unit.DoesNotExist):
-            authoring_api.get_unit(not_unit.pk)
-
     def test_get_container(self):
         """
         Test get_container()
@@ -127,9 +107,9 @@ class UnitTestCase(ComponentTestCase):
         Test how many database queries are required to create a unit
         """
         # The exact numbers here aren't too important - this is just to alert us if anything significant changes.
-        with self.assertNumQueries(18):
+        with self.assertNumQueries(26):
             _empty_unit = self.create_unit_with_components([])
-        with self.assertNumQueries(21):
+        with self.assertNumQueries(29):
             # And try with a non-empty unit:
             self.create_unit_with_components([self.component_1, self.component_2_v1], key="u2")
 
@@ -894,7 +874,10 @@ class UnitTestCase(ComponentTestCase):
         # No need to publish anything as the get_containers_with_entity() API only considers drafts (for now).
 
         with self.assertNumQueries(1):
-            result = list(authoring_api.get_containers_with_entity(self.component_1.pk))
+            result = [
+                c.unit for c in
+                authoring_api.get_containers_with_entity(self.component_1.pk).select_related("unit")
+            ]
         assert result == [
             unit1_1pinned,
             unit2_1pinned_v2,
@@ -905,7 +888,10 @@ class UnitTestCase(ComponentTestCase):
         # about pinned uses anyways (they would be unaffected by a delete).
 
         with self.assertNumQueries(1):
-            result2 = list(authoring_api.get_containers_with_entity(self.component_1.pk, ignore_pinned=True))
+            result2 = [
+                c.unit for c in
+                authoring_api.get_containers_with_entity(self.component_1.pk, ignore_pinned=True).select_related("unit")
+            ]
         assert result2 == [unit4_unpinned]
 
     # Tests TODO:
