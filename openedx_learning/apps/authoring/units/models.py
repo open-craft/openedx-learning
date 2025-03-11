@@ -33,3 +33,12 @@ class UnitVersion(ContainerVersion):
         parent_link=True,
         primary_key=True,
     )
+
+    @property
+    def unit(self):
+        """ Convenience accessor to the Unit this version is associated with """
+        return self.container_version.container.unit  # pylint: disable=no-member
+
+    # Note: the 'publishable_entity_version' field is inherited and will appear on this model, but does not exist
+    # in the underlying database table. It only exists in the ContainerVersion table.
+    # You can verify this by running 'python manage.py sqlmigrate oel_units 0001_initial'

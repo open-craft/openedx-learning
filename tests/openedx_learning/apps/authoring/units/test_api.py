@@ -102,6 +102,21 @@ class UnitTestCase(ComponentTestCase):
         with self.assertNumQueries(0):
             assert result.versioning.has_unpublished_changes
 
+    def test_unit_container_versioning(self):
+        """
+        Test that the .versioning helper of a Unit returns a UnitVersion, and
+        same for the generic Container equivalent.
+        """
+        unit = self.create_unit_with_components([self.component_1, self.component_2])
+        container = unit.container
+        container_version = container.versioning.draft
+        assert isinstance(container_version, authoring_models.ContainerVersion)
+        unit_version = unit.versioning.draft
+        assert isinstance(unit_version, authoring_models.UnitVersion)
+        assert unit_version.container_version == container_version
+        assert unit_version.container_version.container == container
+        assert unit_version.unit == unit
+
     def test_create_unit_queries(self):
         """
         Test how many database queries are required to create a unit
@@ -145,7 +160,7 @@ class UnitTestCase(ComponentTestCase):
             )
         # Check that a new version was not created:
         unit.refresh_from_db()
-        assert authoring_api.get_container(unit.pk).versioning.draft == unit_version
+        assert authoring_api.get_unit(unit.pk).versioning.draft == unit_version
         assert unit.versioning.draft == unit_version
 
     def test_adding_external_components(self):
