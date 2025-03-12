@@ -14,7 +14,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import F, Q, QuerySet
 from django.db.transaction import atomic
 
-from .model_mixins import PublishableContentModelRegistry, PublishableEntityMixin, PublishableEntityVersionMixin
+#from .model_mixins import 
 from .models import (
     Container,
     ContainerVersion,
@@ -22,8 +22,11 @@ from .models import (
     EntityList,
     EntityListRow,
     LearningPackage,
+    PublishableContentModelRegistry,
     PublishableEntity,
+    PublishableEntityMixin,
     PublishableEntityVersion,
+    PublishableEntityVersionMixin,
     Published,
     PublishLog,
     PublishLogRecord,
