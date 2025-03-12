@@ -596,6 +596,7 @@ def create_container(
     Returns:
         The newly created container.
     """
+    assert issubclass(container_model, Container)
     with atomic():
         publishable_entity = create_publishable_entity(
             learning_package_id, key, created, created_by
@@ -682,6 +683,7 @@ def create_container_version(
     Returns:
         The newly created container version.
     """
+    assert issubclass(container_version_model, ContainerVersion)
     with atomic(savepoint=False):
         container = Container.objects.select_related("publishable_entity").get(pk=container_pk)
         entity = container.publishable_entity
@@ -751,6 +753,7 @@ def create_next_container_version(
     Returns:
         The newly created container version.
     """
+    assert issubclass(container_version_model, ContainerVersion)
     with atomic():
         container = Container.objects.select_related("publishable_entity").get(pk=container_pk)
         entity = container.publishable_entity
