@@ -13,7 +13,10 @@ __all__ = [
 
 class Unit(Container):
     """
-    A Unit is Container, which is a PublishableEntity.
+    A Unit is type of Container that holds Components.
+
+    Via Container and its PublishableEntityMixin, Units are also publishable
+    entities and can be added to other containers.
     """
     container = models.OneToOneField(
         Container,
@@ -25,7 +28,10 @@ class Unit(Container):
 
 class UnitVersion(ContainerVersion):
     """
-    A UnitVersion is a ContainerVersion, which is a PublishableEntityVersion.
+    A UnitVersion is a specific version of a Unit.
+
+    Via ContainerVersion and its EntityList, it defines the list of Components
+    in this version of the Unit.
     """
     container_version = models.OneToOneField(
         ContainerVersion,
