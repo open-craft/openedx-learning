@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.core.validators import MinValueValidator
 from django.db import models
+
 from openedx_learning.lib.fields import (
     case_insensitive_char_field,
     immutable_uuid_field,
